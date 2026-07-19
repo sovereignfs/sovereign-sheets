@@ -18,7 +18,7 @@ depends on the previous unless noted otherwise.
 | 1 | **Scaffold** — `manifest.json`, `package.json`, `icon.svg`, empty `/sheets` page with a static grid shell (no persistence, no formulas), `tsconfig.json` | Manifest & permissions | — | ✅ |
 | 2 | **Data model + basic editing/save** — `workbooks`/`sheets` tables + migrations, workbook list/create/open, editable grid (plain text/number, no formulas yet), debounced autosave to `cells_json`, sheet tabs (add/rename/delete/reorder) | Data model | Task 1 | ✅ |
 | 3 | **Formula engine integration** — wire the chosen formula engine client-side, formula bar, `=` parsing, cell refs/ranges/cross-sheet refs, the built-in function set (`SUM`, `AVERAGE`, etc.), undo/redo, error-cell display | MVP scope | Task 2 | ✅ |
-| 4 | **`FINANCE()` currency conversion** — `finance_rate_cache` table, Frankfurter fetch client, `FINANCE(base, quote)` registration + async-resolve bridge, basic error handling for unsupported currency codes | The `FINANCE()` function | Task 3 | 📋 |
+| 4 | **`FINANCE()` currency conversion** — `finance_rate_cache` table, Frankfurter fetch client, `FINANCE(base, quote)` registration + async-resolve bridge, basic error handling for unsupported currency codes | The `FINANCE()` function | Task 3 | ✅ |
 | 5 | **Polish** — CSV export, keyboard nav (arrows, tab/enter commit, copy/paste, fill-down), empty states, delete confirmation, save-error toasts, finalize docs | MVP scope | Task 4 | 📋 |
 
 **MVP done when:** a user can create a workbook, add/edit sheets, type
