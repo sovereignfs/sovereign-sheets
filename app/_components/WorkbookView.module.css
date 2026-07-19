@@ -1,0 +1,33 @@
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-4);
+  height: 100%;
+  min-height: 0;
+  padding: var(--sv-space-6);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sv-space-4);
+}
+
+.title {
+  font-size: var(--sv-font-size-2xl);
+  margin: var(--sv-space-1) 0 0;
+}
+
+.deleteWorkbook {
+  background: none;
+  border: none;
+  color: var(--sv-color-text-muted);
+  cursor: pointer;
+  font-size: var(--sv-font-size-sm);
+  padding: var(--sv-space-2) 0;
+}
+
+.deleteWorkbook:hover {
+  color: var(--sv-color-text-primary);
+}

@@ -1,0 +1,73 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  flex: 1;
+  min-height: 0;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.scroller {
+  overflow: auto;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  flex: 1;
+  min-height: 0;
+}
+
+.grid {
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.cornerHeader,
+.colHeader,
+.rowHeader {
+  background: var(--sv-color-surface-sunken);
+  border: 1px solid var(--sv-color-border);
+  color: var(--sv-color-text-muted);
+  font-size: var(--sv-font-size-sm);
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  min-width: 5.5rem;
+  padding: var(--sv-space-1);
+}
+
+.rowHeader {
+  left: 0;
+  top: auto;
+  min-width: 2.5rem;
+  text-align: center;
+}
+
+.cornerHeader {
+  left: 0;
+  z-index: 2;
+  min-width: 2.5rem;
+}
+
+.cell {
+  border: 1px solid var(--sv-color-border);
+  padding: 0;
+}
+
+.cellInput {
+  background: none;
+  border: none;
+  color: var(--sv-color-text-primary);
+  font-size: var(--sv-font-size-sm);
+  padding: var(--sv-space-1) var(--sv-space-2);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cellInput:focus {
+  outline: 2px solid var(--sv-color-accent);
+  outline-offset: -2px;
+}

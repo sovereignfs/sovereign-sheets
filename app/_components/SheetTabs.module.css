@@ -1,0 +1,79 @@
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--sv-color-border);
+  padding-bottom: var(--sv-space-1);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-1);
+  border-radius: var(--sv-radius-sm) var(--sv-radius-sm) 0 0;
+  padding: var(--sv-space-1) var(--sv-space-2);
+  white-space: nowrap;
+}
+
+.tab.active {
+  background: var(--sv-color-surface-sunken);
+}
+
+.tabLabel {
+  background: none;
+  border: none;
+  color: var(--sv-color-text-muted);
+  cursor: pointer;
+  font-size: var(--sv-font-size-sm);
+  padding: var(--sv-space-1);
+}
+
+.tab.active .tabLabel {
+  color: var(--sv-color-text-primary);
+  font-weight: 600;
+}
+
+.renameInput {
+  height: 1.75rem;
+  width: 8rem;
+}
+
+.tabControls {
+  display: flex;
+  gap: 2px;
+}
+
+.tabControl {
+  background: none;
+  border: none;
+  color: var(--sv-color-text-subtle);
+  cursor: pointer;
+  font-size: var(--sv-font-size-sm);
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.tabControl:hover:not(:disabled) {
+  color: var(--sv-color-text-primary);
+}
+
+.tabControl:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.addTab {
+  background: none;
+  border: 1px dashed var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  color: var(--sv-color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  height: 1.75rem;
+  width: 1.75rem;
+}
+
+.addTab:hover {
+  color: var(--sv-color-text-primary);
+}
