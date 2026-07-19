@@ -2,7 +2,6 @@
 
 Full requirements, data model, and the `FINANCE()` design live in the spec
 (`SPEC.md`); **this doc is the source of truth for build order and status.**
-Nothing has shipped yet — this repository currently holds planning docs only.
 
 Status legend: 📋 not started · 🚧 in progress · ✅ shipped
 
@@ -16,9 +15,9 @@ depends on the previous unless noted otherwise.
 
 | # | Task | Spec ref | Depends on | Status |
 | - | ---- | -------- | ---------- | ------ |
-| 1 | **Scaffold** — `manifest.json`, `package.json`, `icon.svg`, empty `/sheets` page with a static grid shell (no persistence, no formulas), `tsconfig.json` | Manifest & permissions | — | 📋 |
-| 2 | **Data model + basic editing/save** — `workbooks`/`sheets` tables + migrations, workbook list/create/open, editable grid (plain text/number, no formulas yet), debounced autosave to `cells_json`, sheet tabs (add/rename/delete/reorder) | Data model | Task 1 | 📋 |
-| 3 | **Formula engine integration** — wire the chosen formula engine client-side, formula bar, `=` parsing, cell refs/ranges/cross-sheet refs, the built-in function set (`SUM`, `AVERAGE`, etc.), undo/redo, error-cell display | MVP scope | Task 2 | 📋 |
+| 1 | **Scaffold** — `manifest.json`, `package.json`, `icon.svg`, empty `/sheets` page with a static grid shell (no persistence, no formulas), `tsconfig.json` | Manifest & permissions | — | ✅ |
+| 2 | **Data model + basic editing/save** — `workbooks`/`sheets` tables + migrations, workbook list/create/open, editable grid (plain text/number, no formulas yet), debounced autosave to `cells_json`, sheet tabs (add/rename/delete/reorder) | Data model | Task 1 | ✅ |
+| 3 | **Formula engine integration** — wire the chosen formula engine client-side, formula bar, `=` parsing, cell refs/ranges/cross-sheet refs, the built-in function set (`SUM`, `AVERAGE`, etc.), undo/redo, error-cell display | MVP scope | Task 2 | ✅ |
 | 4 | **`FINANCE()` currency conversion** — `finance_rate_cache` table, Frankfurter fetch client, `FINANCE(base, quote)` registration + async-resolve bridge, basic error handling for unsupported currency codes | The `FINANCE()` function | Task 3 | 📋 |
 | 5 | **Polish** — CSV export, keyboard nav (arrows, tab/enter commit, copy/paste, fill-down), empty states, delete confirmation, save-error toasts, finalize docs | MVP scope | Task 4 | 📋 |
 
@@ -26,9 +25,8 @@ depends on the previous unless noted otherwise.
 formulas that recalculate correctly using the standard function set, pull a
 live currency rate into a cell via `FINANCE()`, and export a sheet to CSV.
 
-**Gate before Task 3:** confirm the formula-engine licensing question in
-SPEC.md's "Open questions" (§1) — don't add a GPLv3 dependency without that
-sign-off.
+Task 3 shipped with HyperFormula (GPLv3 free tier) as the formula engine —
+see SPEC.md's "Open questions" (§1) for the licensing reasoning.
 
 ---
 
