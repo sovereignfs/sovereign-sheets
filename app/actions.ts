@@ -6,9 +6,13 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { sdk } from '@sovereignfs/sdk';
-import { sheets, workbooks } from './_db/schema';
+import { financeRateCache, sheets, workbooks } from './_db/schema';
 import { DEFAULT_COL_COUNT, DEFAULT_ROW_COUNT } from './_lib/config';
 import { formString, now } from './_lib/formUtils';
+import { fetchFrankfurterRates } from './_lib/frankfurter';
+import { pairKey } from './_lib/finance-function';
+
+const FINANCE_RATE_TTL_SECONDS = 6 * 60 * 60;
 
 // DrizzleClient is typed as `unknown` in the SDK (dialect-agnostic contract).
 // This plugin's manifest pins an isolated SQLite store, so the cast is safe.
@@ -291,4 +295,88 @@ export async function deleteWorkbookAction(workbookId: string): Promise<void> {
 
   revalidatePath('/sheets');
   redirect('/sheets');
+}
+
+export interface FinanceRateResult {
+  rate: number;
+  asOf: number;
+}
+
+/**
+ * Resolves currency rates for FINANCE() calls, one batched round-trip per
+ * distinct base currency. No auth/tenant scoping — rates are cached
+ * instance-wide (public market data), same rationale as
+ * sovereign-ledger's ledger_fx_rates.
+ */
+export async function getFinanceRatesAction(
+  pairs: { base: string; quote: string }[],
+): Promise<Record<string, FinanceRateResult | null>> {
+  const db = (await sdk.db.getClient()) as Db;
+  const nowTs = now();
+  const result: Record<string, FinanceRateResult | null> = {};
+  const toFetch = new Map<string, Set<string>>();
+
+  for (const { base: rawBase, quote: rawQuote } of pairs) {
+    const base = rawBase.trim().toUpperCase();
+    const quote = rawQuote.trim().toUpperCase();
+    const key = pairKey(base, quote);
+    if (key in result) continue;
+    if (base === quote) {
+      result[key] = { rate: 1, asOf: nowTs };
+      continue;
+    }
+
+    const [cached] = await db
+      .select()
+      .from(financeRateCache)
+      .where(and(eq(financeRateCache.base, base), eq(financeRateCache.quote, quote)))
+      .limit(1);
+
+    if (cached && nowTs - cached.fetchedAt < FINANCE_RATE_TTL_SECONDS) {
+      result[key] = { rate: Number(cached.rate), asOf: cached.asOf };
+      continue;
+    }
+
+    if (!toFetch.has(base)) toFetch.set(base, new Set());
+    toFetch.get(base)?.add(quote);
+  }
+
+  for (const [base, quotes] of toFetch) {
+    const fetched = await fetchFrankfurterRates(base, [...quotes]);
+
+    if (!fetched) {
+      // Frankfurter unreachable — serve stale cache if we have it, else null.
+      for (const quote of quotes) {
+        const key = pairKey(base, quote);
+        const [cached] = await db
+          .select()
+          .from(financeRateCache)
+          .where(and(eq(financeRateCache.base, base), eq(financeRateCache.quote, quote)))
+          .limit(1);
+        result[key] = cached ? { rate: Number(cached.rate), asOf: cached.asOf } : null;
+      }
+      continue;
+    }
+
+    const asOf = Math.floor(new Date(fetched.date).getTime() / 1000) || nowTs;
+    for (const quote of quotes) {
+      const key = pairKey(base, quote);
+      const rate = fetched.rates[quote];
+      if (rate === undefined) {
+        result[key] = null;
+        continue;
+      }
+      result[key] = { rate, asOf };
+      const rateStr = String(rate);
+      await db
+        .insert(financeRateCache)
+        .values({ base, quote, rate: rateStr, asOf, fetchedAt: nowTs, source: 'frankfurter' })
+        .onConflictDoUpdate({
+          target: [financeRateCache.base, financeRateCache.quote],
+          set: { rate: rateStr, asOf, fetchedAt: nowTs, source: 'frankfurter' },
+        });
+    }
+  }
+
+  return result;
 }

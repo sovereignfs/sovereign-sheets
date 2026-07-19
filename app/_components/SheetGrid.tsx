@@ -20,6 +20,7 @@ export function SheetGrid({
   colCount,
   version,
   onVersionChange,
+  onCellCommitted,
 }: {
   engine: HyperFormula;
   hfSheetId: number;
@@ -28,6 +29,7 @@ export function SheetGrid({
   colCount: number;
   version: number;
   onVersionChange: (next: number) => void;
+  onCellCommitted?: (raw: string) => void;
 }) {
   const [status, setStatus] = useState<StatusBadgeStatus>('synced');
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
@@ -64,6 +66,7 @@ export function SheetGrid({
     engine.setCellContents({ sheet: hfSheetId, row, col }, [[raw === '' ? null : raw]]);
     onVersionChange(version + 1);
     scheduleSave();
+    onCellCommitted?.(raw);
   }
 
   return (

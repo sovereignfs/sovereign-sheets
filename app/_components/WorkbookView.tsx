@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, ConfirmDialog } from '@sovereignfs/ui';
 import { BackLink } from './BackLink';
 import { SheetTabs, type SheetTabItem } from './SheetTabs';
@@ -9,6 +9,7 @@ import {
   addSheetAction,
   deleteSheetAction,
   deleteWorkbookAction,
+  getFinanceRatesAction,
   renameSheetAction,
   reorderSheetsAction,
   saveSheetCellsAction,
@@ -17,6 +18,7 @@ import {
 import { DEFAULT_COL_COUNT, DEFAULT_ROW_COUNT } from '../_lib/config';
 import { cellsMapToGrid, createEngine, gridToCellsMap } from '../_lib/formula-engine';
 import { parseCellsJson, serializeCellsJson } from '../_lib/cells';
+import { extractFinancePairs, getCachedRate, setCachedRate } from '../_lib/finance-function';
 import styles from './WorkbookView.module.css';
 
 export interface WorkbookSheet extends SheetTabItem {
@@ -141,6 +143,45 @@ export function WorkbookView({
     }
   }
 
+  async function resolveFinancePairs(pairs: { base: string; quote: string }[]) {
+    const unresolved = pairs.filter((p) => getCachedRate(p.base, p.quote) === undefined);
+    if (unresolved.length === 0) return;
+
+    const results = await getFinanceRatesAction(unresolved);
+    let changed = false;
+    for (const pair of unresolved) {
+      const key = `${pair.base.toUpperCase()}/${pair.quote.toUpperCase()}`;
+      const value = results[key];
+      if (value) {
+        setCachedRate(pair.base, pair.quote, value.rate);
+        changed = true;
+      }
+    }
+    if (changed && engineRef.current) {
+      engineRef.current.rebuildAndRecalculate();
+      setVersion((v) => v + 1);
+    }
+  }
+
+  // On mount, batch-resolve every FINANCE() pair already present across all
+  // sheets — avoids one Frankfurter round-trip per cell.
+  useEffect(() => {
+    const pairs: { base: string; quote: string }[] = [];
+    for (const sheet of initialSheets) {
+      const cells = parseCellsJson(sheet.cellsJson);
+      for (const cell of Object.values(cells)) {
+        if (typeof cell.v === 'string') pairs.push(...extractFinancePairs(cell.v));
+      }
+    }
+    void resolveFinancePairs(pairs);
+    // Resolve once, from the initial server-loaded sheets.
+  }, []);
+
+  function handleCellCommitted(raw: string) {
+    const pairs = extractFinancePairs(raw);
+    if (pairs.length > 0) void resolveFinancePairs(pairs);
+  }
+
   function handleUndo() {
     if (!engine?.isThereSomethingToUndo()) return;
     engine.undo();
@@ -198,6 +239,7 @@ export function WorkbookView({
           colCount={activeSheet.colCount}
           version={version}
           onVersionChange={setVersion}
+          onCellCommitted={handleCellCommitted}
         />
       )}
 

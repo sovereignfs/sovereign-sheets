@@ -2,12 +2,14 @@ import { DetailedCellError, HyperFormula } from 'hyperformula';
 import type { RawCellContent } from 'hyperformula';
 import { cellKey } from './a1';
 import type { CellsMap } from './cells';
+import { ensureFinanceFunctionRegistered } from './finance-function';
 
 /**
  * hyperformula's free tier is GPLv3-licensed — see SPEC.md's "Open questions"
  * for the cross-plugin licensing reasoning behind depending on it here.
  */
 export function createEngine(): HyperFormula {
+  ensureFinanceFunctionRegistered();
   return HyperFormula.buildEmpty({ licenseKey: 'gpl-v3' });
 }
 
