@@ -19,6 +19,12 @@
   margin: var(--sv-space-1) 0 0;
 }
 
+.headerActions {
+  align-items: center;
+  display: flex;
+  gap: var(--sv-space-2);
+}
+
 .deleteWorkbook {
   background: none;
   border: none;

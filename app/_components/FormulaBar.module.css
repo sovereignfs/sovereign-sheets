@@ -1,0 +1,25 @@
+.bar {
+  align-items: center;
+  border: 1px solid var(--sv-color-border);
+  border-radius: var(--sv-radius-sm);
+  display: flex;
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-1) var(--sv-space-2);
+}
+
+.cellLabel {
+  color: var(--sv-color-text-muted);
+  flex-shrink: 0;
+  font-size: var(--sv-font-size-sm);
+  font-weight: 600;
+  min-width: 2.5rem;
+}
+
+.input {
+  border: none;
+  min-height: 0;
+  padding: var(--sv-space-1);
+  resize: none;
+  white-space: nowrap;
+  overflow-x: auto;
+}

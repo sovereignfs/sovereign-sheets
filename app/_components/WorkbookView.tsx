@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ConfirmDialog } from '@sovereignfs/ui';
+import { useRef, useState } from 'react';
+import { Button, ConfirmDialog } from '@sovereignfs/ui';
 import { BackLink } from './BackLink';
 import { SheetTabs, type SheetTabItem } from './SheetTabs';
 import { SheetGrid } from './SheetGrid';
@@ -11,9 +11,12 @@ import {
   deleteWorkbookAction,
   renameSheetAction,
   reorderSheetsAction,
+  saveSheetCellsAction,
   setActiveSheetAction,
 } from '../actions';
 import { DEFAULT_COL_COUNT, DEFAULT_ROW_COUNT } from '../_lib/config';
+import { cellsMapToGrid, createEngine, gridToCellsMap } from '../_lib/formula-engine';
+import { parseCellsJson, serializeCellsJson } from '../_lib/cells';
 import styles from './WorkbookView.module.css';
 
 export interface WorkbookSheet extends SheetTabItem {
@@ -35,8 +38,30 @@ export function WorkbookView({
   const [activeSheetId, setActiveSheetId] = useState(initialSheets[0]?.id ?? null);
   const [deleting, setDeleting] = useState(false);
   const [confirmDeleteWorkbook, setConfirmDeleteWorkbook] = useState(false);
+  const [version, setVersion] = useState(0);
+
+  // One HyperFormula instance for the whole workbook (cross-sheet formulas
+  // need every sheet loaded), created once and mutated in place.
+  const engineRef = useRef<ReturnType<typeof createEngine> | null>(null);
+  const hfSheetIds = useRef<Map<string, number>>(new Map());
+  if (!engineRef.current) {
+    const engine = createEngine();
+    for (const sheet of [...initialSheets].sort((a, b) => a.position - b.position)) {
+      engine.addSheet(sheet.name);
+      const hfId = engine.getSheetId(sheet.name);
+      if (hfId === undefined) continue;
+      hfSheetIds.current.set(sheet.id, hfId);
+      engine.setSheetContent(
+        hfId,
+        cellsMapToGrid(parseCellsJson(sheet.cellsJson), sheet.rowCount, sheet.colCount),
+      );
+    }
+    engineRef.current = engine;
+  }
+  const engine = engineRef.current;
 
   const activeSheet = sheetList.find((s) => s.id === activeSheetId) ?? sheetList[0] ?? null;
+  const activeHfSheetId = activeSheet ? hfSheetIds.current.get(activeSheet.id) : undefined;
 
   function handleSelectSheet(id: string) {
     setActiveSheetId(id);
@@ -45,7 +70,10 @@ export function WorkbookView({
 
   async function handleAddSheet() {
     const created = await addSheetAction(workbookId);
-    if (!created) return;
+    if (!created || !engine) return;
+    engine.addSheet(created.name);
+    const hfId = engine.getSheetId(created.name);
+    if (hfId !== undefined) hfSheetIds.current.set(created.id, hfId);
     setSheetList((prev) => [
       ...prev,
       {
@@ -62,12 +90,20 @@ export function WorkbookView({
   }
 
   function handleRenameSheet(id: string, newName: string) {
+    if (sheetList.some((s) => s.id !== id && s.name === newName)) return;
+    const hfId = hfSheetIds.current.get(id);
+    if (engine && hfId !== undefined) engine.renameSheet(hfId, newName);
     setSheetList((prev) => prev.map((s) => (s.id === id ? { ...s, name: newName } : s)));
     void renameSheetAction(id, workbookId, newName);
   }
 
   async function handleDeleteSheet(id: string) {
     if (sheetList.length <= 1) return;
+    const hfId = hfSheetIds.current.get(id);
+    if (engine && hfId !== undefined) {
+      engine.removeSheet(hfId);
+      hfSheetIds.current.delete(id);
+    }
     const remaining = sheetList.filter((s) => s.id !== id);
     setSheetList(remaining);
     if (activeSheetId === id) {
@@ -95,6 +131,30 @@ export function WorkbookView({
     await deleteWorkbookAction(workbookId);
   }
 
+  function saveAllSheets() {
+    if (!engine) return;
+    for (const sheet of sheetList) {
+      const hfId = hfSheetIds.current.get(sheet.id);
+      if (hfId === undefined) continue;
+      const grid = engine.getSheetSerialized(hfId);
+      void saveSheetCellsAction(sheet.id, serializeCellsJson(gridToCellsMap(grid)));
+    }
+  }
+
+  function handleUndo() {
+    if (!engine?.isThereSomethingToUndo()) return;
+    engine.undo();
+    setVersion((v) => v + 1);
+    saveAllSheets();
+  }
+
+  function handleRedo() {
+    if (!engine?.isThereSomethingToRedo()) return;
+    engine.redo();
+    setVersion((v) => v + 1);
+    saveAllSheets();
+  }
+
   return (
     <div className={styles.view}>
       <div className={styles.header}>
@@ -102,13 +162,21 @@ export function WorkbookView({
           <BackLink href="/sheets">Back to workbooks</BackLink>
           <h1 className={styles.title}>{name}</h1>
         </div>
-        <button
-          type="button"
-          className={styles.deleteWorkbook}
-          onClick={() => setConfirmDeleteWorkbook(true)}
-        >
-          Delete workbook
-        </button>
+        <div className={styles.headerActions}>
+          <Button variant="ghost" size="sm" onClick={handleUndo}>
+            Undo
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleRedo}>
+            Redo
+          </Button>
+          <button
+            type="button"
+            className={styles.deleteWorkbook}
+            onClick={() => setConfirmDeleteWorkbook(true)}
+          >
+            Delete workbook
+          </button>
+        </div>
       </div>
 
       <SheetTabs
@@ -121,13 +189,15 @@ export function WorkbookView({
         onReorder={handleReorder}
       />
 
-      {activeSheet && (
+      {activeSheet && engine && activeHfSheetId !== undefined && (
         <SheetGrid
-          key={activeSheet.id}
+          engine={engine}
+          hfSheetId={activeHfSheetId}
           sheetId={activeSheet.id}
           rowCount={activeSheet.rowCount}
           colCount={activeSheet.colCount}
-          initialCellsJson={activeSheet.cellsJson}
+          version={version}
+          onVersionChange={setVersion}
         />
       )}
 
