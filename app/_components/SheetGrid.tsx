@@ -2,10 +2,11 @@
 
 import { useMemo, useRef, useState } from 'react';
 import type { HyperFormula } from 'hyperformula';
-import { StatusBadge, type StatusBadgeStatus } from '@sovereignfs/ui';
+import { Button, StatusBadge, useToast, type StatusBadgeStatus } from '@sovereignfs/ui';
 import { saveSheetCellsAction } from '../actions';
 import { cellKey, colIndexToLetters } from '../_lib/a1';
 import { serializeCellsJson } from '../_lib/cells';
+import { cellsToCsv, downloadCsv } from '../_lib/csv';
 import { displayValue, gridToCellsMap } from '../_lib/formula-engine';
 import { FormulaBar } from './FormulaBar';
 import styles from './SheetGrid.module.css';
@@ -16,6 +17,7 @@ export function SheetGrid({
   engine,
   hfSheetId,
   sheetId,
+  sheetName,
   rowCount,
   colCount,
   version,
@@ -25,6 +27,7 @@ export function SheetGrid({
   engine: HyperFormula;
   hfSheetId: number;
   sheetId: string;
+  sheetName: string;
   rowCount: number;
   colCount: number;
   version: number;
@@ -34,6 +37,8 @@ export function SheetGrid({
   const [status, setStatus] = useState<StatusBadgeStatus>('synced');
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const toast = useToast();
 
   const columnLabels = useMemo(
     () => Array.from({ length: colCount }, (_, i) => colIndexToLetters(i)),
@@ -58,7 +63,14 @@ export function SheetGrid({
       const grid = engine.getSheetSerialized(hfSheetId);
       void saveSheetCellsAction(sheetId, serializeCellsJson(gridToCellsMap(grid)))
         .then(() => setStatus('synced'))
-        .catch(() => setStatus('error'));
+        .catch(() => {
+          setStatus('error');
+          toast.show({
+            title: 'Could not save changes',
+            message: `${sheetName} has unsaved edits. Check your connection and try again.`,
+            category: 'error',
+          });
+        });
     }, AUTOSAVE_DELAY_MS);
   }
 
@@ -67,6 +79,60 @@ export function SheetGrid({
     onVersionChange(version + 1);
     scheduleSave();
     onCellCommitted?.(raw);
+  }
+
+  function focusCell(row: number, col: number) {
+    if (row < 0 || row >= rowCount || col < 0 || col >= colCount) return;
+    inputRefs.current.get(cellKey(row, col))?.focus();
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, row: number, col: number) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+      // Fill down: copy this cell's raw input into the cell below.
+      e.preventDefault();
+      const raw = getRawInput(row, col);
+      commitCell(row + 1, col, raw);
+      focusCell(row + 1, col);
+      return;
+    }
+    switch (e.key) {
+      case 'Enter':
+        e.preventDefault();
+        focusCell(row + (e.shiftKey ? -1 : 1), col);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        focusCell(row - 1, col);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        focusCell(row + 1, col);
+        break;
+      case 'ArrowLeft':
+        if ((e.target as HTMLInputElement).selectionStart === 0) {
+          e.preventDefault();
+          focusCell(row, col - 1);
+        }
+        break;
+      case 'ArrowRight': {
+        const input = e.target as HTMLInputElement;
+        if (input.selectionStart === input.value.length) {
+          e.preventDefault();
+          focusCell(row, col + 1);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  function handleExportCsv() {
+    const rows: string[][] = [];
+    for (let row = 0; row < rowCount; row++) {
+      rows.push(columnLabels.map((_, col) => getDisplay(row, col)));
+    }
+    downloadCsv(`${sheetName}.csv`, cellsToCsv(rows));
   }
 
   return (
@@ -80,6 +146,9 @@ export function SheetGrid({
         }}
       />
       <div className={styles.toolbar}>
+        <Button variant="ghost" size="sm" onClick={handleExportCsv}>
+          Export CSV
+        </Button>
         <StatusBadge status={status} />
       </div>
       <div className={styles.scroller}>
@@ -104,10 +173,15 @@ export function SheetGrid({
                   return (
                     <td key={key} className={styles.cell}>
                       <input
+                        ref={(el) => {
+                          if (el) inputRefs.current.set(key, el);
+                          else inputRefs.current.delete(key);
+                        }}
                         className={styles.cellInput}
                         value={isActive ? getRawInput(row, col) : getDisplay(row, col)}
                         onFocus={() => setActiveCell({ row, col })}
                         onChange={(e) => commitCell(row, col, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, row, col)}
                         aria-label={key}
                       />
                     </td>

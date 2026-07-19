@@ -9,13 +9,13 @@ with multiple sheet tabs, standard formulas, and one custom function,
 `FINANCE(base, quote)`, for currency conversion (the GOOGLEFINANCE
 equivalent). A `type: sovereign` Sovereign plugin, open source (AGPLv3).
 
-**Status: planning only.** No `manifest.json`, `app/`, or database schema
-exists yet — this repo currently holds only planning docs. Do not assume any
-scaffold is in place; check before referencing a file path.
+**Status: MVP shipped** (tasks 1–5 in ROADMAP.md) — workbooks, sheets,
+HyperFormula-backed formulas, `FINANCE()`, and CSV export are all live at
+`/sheets`.
 
 Spec: [SPEC.md](SPEC.md) · Build order: [ROADMAP.md](ROADMAP.md)
 
-## Identity (planned — not yet built)
+## Identity
 
 | Property     | Value                          |
 | ------------- | ------------------------------ |
@@ -69,7 +69,7 @@ rates are public data, same rationale as the Ledger plugin's untenanted
 `ledger_fx_rates` cache (`plugins/sovereign-ledger.local` in the platform
 monorepo).
 
-## SDK-only rule (applies once code exists)
+## SDK-only rule
 
 **Never import from `@sovereignfs/db` directly.** All database access goes
 through `sdk.db`. This is enforced by the platform's ESLint SDK boundary rule.
@@ -86,14 +86,13 @@ import { getPlatformDb } from '@sovereignfs/db';
 
 ## Open question: formula engine license
 
-HyperFormula (the leading formula-engine candidate) ships its free tier under
-**GPLv3**. This plugin is licensed AGPL-3.0-or-later, and the user has
-confirmed that's fine for *this plugin's own* distribution — but whether a
-GPLv3 dependency in one `type: sovereign` plugin imposes any obligation on
-the core Sovereign platform or on other plugins with different licenses is
-flagged in SPEC.md as needing real confirmation, not just this plan's
-reasoning, before task 3 (formula engine integration) starts. Don't add
-`hyperformula` as a dependency without that being resolved.
+`hyperformula` (dependency since task 3) ships its free tier under **GPLv3**.
+This plugin is licensed AGPL-3.0-or-later, and the user has confirmed that's
+fine for *this plugin's own* distribution. Whether a GPLv3 dependency in one
+`type: sovereign` plugin imposes any obligation on the core Sovereign
+platform or on other plugins with different licenses is still flagged in
+SPEC.md as needing real legal confirmation, not just this repo's own
+reasoning — get that before shipping beyond a local/dev instance.
 
 ## Versioning
 

@@ -4,7 +4,7 @@
 **Date:** July 2026\
 **Author:** kasunben\
 **Purpose:** Canonical specification for the Sheets plugin — the single source of truth for its manifest, access model, data model, and build plan.\
-**Status:** Planning — no code written yet.
+**Status:** MVP shipped (tasks 1–5, see ROADMAP.md).
 
 ---
 
@@ -199,15 +199,20 @@ plugins/sovereign-sheets.local/
                                  # addSheet, renameSheet, deleteSheet,
                                  # getFinanceRate (server bridge for FINANCE())
     _components/
-      SheetGrid.tsx              # owns the formula-engine instance
+      WorkbookView.tsx           # owns the HyperFormula instance for the workbook
+      SheetGrid.tsx              # active sheet's grid, reads/writes via the shared engine
       SheetTabs.tsx
       FormulaBar.tsx             # built on CodeTextarea (@sovereignfs/ui)
-      SaveStatusBadge.tsx        # built on StatusBadge
+      BackLink.tsx
     _lib/
-      formula-engine-client.ts   # engine init, FINANCE() registration
-      a1.ts                      # A1<->row/col helpers
-      csv.ts
+      formula-engine.ts          # engine init, cellsJson<->grid conversion, error display
+      finance-function.ts        # FINANCE() HyperFormula plugin + rate cache
       frankfurter.ts             # thin fetch client for api.frankfurter.dev
+      a1.ts                      # A1<->row/col helpers
+      cells.ts                   # CellData/CellsMap types, cellsJson parse/serialize
+      csv.ts
+      config.ts                  # DEFAULT_ROW_COUNT/DEFAULT_COL_COUNT
+      formUtils.ts
     _db/schema.ts
   db/schema.ts                   # re-export of app/_db/schema.ts
   migrations/sqlite/
@@ -258,34 +263,28 @@ actions), `EmptyState` (no-workbooks state).
 
 `package.json`: `@sovereignfs/sovereign-sheets`, `type: module`, license
 `AGPL-3.0-or-later` (matches Wallet/Tally), deps `@sovereignfs/sdk`,
-`@sovereignfs/ui`, `drizzle-orm`, `next`/`react`/`react-dom` at `catalog:`,
-plus a formula-engine dependency (candidate: HyperFormula — see "Open
-questions" below); devDeps `drizzle-kit`, `@sovereignfs/tsconfig`,
+`@sovereignfs/ui`, `drizzle-orm`, `hyperformula`, `next`/`react`/`react-dom`
+at `catalog:`; devDeps `drizzle-kit`, `@sovereignfs/tsconfig`,
 `typescript`/`@types/react*` at `catalog:`.
 
 ## Open questions
 
-1. **Formula engine choice and its license.** HyperFormula is the leading
-   candidate (Excel-compatible syntax, dependency-graph recalculation,
-   supports registering custom async functions — a good fit for `FINANCE()`'s
-   server round-trip). Its free/community edition is **GPLv3**; a commercial
-   license exists for closed-source use. This repo already has
-   AGPL-3.0-or-later plugins (`sovereign-wallet`, `sovereign-tally`)
-   coexisting with the platform, and each `type: sovereign` plugin lives in
-   its own repository, touching the platform only through the
-   `@sovereignfs/sdk` contract at runtime — not statically linked into the
-   platform core or other plugins. That separate-work boundary is the same
-   reasoning that lets a GPL'd desktop app run on a proprietary OS. This is
-   not a legal opinion, though — get real confirmation that GPLv3-in-Sheets
-   doesn't create an obligation on the core platform or other plugins before
-   depending on HyperFormula. If it's a blocker, a hand-rolled minimal
-   parser/evaluator is the fallback (more work, less Excel-fidelity, no
-   license question).
+1. **Formula engine choice and its license — resolved, HyperFormula
+   adopted.** Its free/community edition is **GPLv3**; a commercial license
+   exists for closed-source use. This repo already has AGPL-3.0-or-later
+   plugins (`sovereign-wallet`, `sovereign-tally`) coexisting with the
+   platform, and each `type: sovereign` plugin lives in its own repository,
+   touching the platform only through the `@sovereignfs/sdk` contract at
+   runtime — not statically linked into the platform core or other plugins.
+   That separate-work boundary is the same reasoning that lets a GPL'd
+   desktop app run on a proprietary OS. This is not a legal opinion — get
+   real confirmation that GPLv3-in-Sheets doesn't create an obligation on the
+   core platform or other plugins if this ships beyond a local/dev instance.
 2. **Frankfurter reliability at scale.** No SLA; revisit if it becomes a
    problem in practice — the provider-client interface in "The `FINANCE()`
    function" section keeps a swap possible.
-3. **CSV export scope.** In-scope for MVP (single sheet only) — full workbook
-   export, and any import, stay post-MVP.
+3. **CSV export scope — resolved, shipped in MVP** (single sheet only via a
+   toolbar button; full workbook export and any import stay post-MVP).
 
 ## Post-MVP (tracked, not designed in detail yet)
 

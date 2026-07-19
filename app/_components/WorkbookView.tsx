@@ -40,6 +40,7 @@ export function WorkbookView({
   const [activeSheetId, setActiveSheetId] = useState(initialSheets[0]?.id ?? null);
   const [deleting, setDeleting] = useState(false);
   const [confirmDeleteWorkbook, setConfirmDeleteWorkbook] = useState(false);
+  const [confirmDeleteSheetId, setConfirmDeleteSheetId] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
 
   // One HyperFormula instance for the whole workbook (cross-sheet formulas
@@ -226,7 +227,7 @@ export function WorkbookView({
         onSelect={handleSelectSheet}
         onAdd={() => void handleAddSheet()}
         onRename={handleRenameSheet}
-        onDelete={(id) => void handleDeleteSheet(id)}
+        onDelete={setConfirmDeleteSheetId}
         onReorder={handleReorder}
       />
 
@@ -235,6 +236,7 @@ export function WorkbookView({
           engine={engine}
           hfSheetId={activeHfSheetId}
           sheetId={activeSheet.id}
+          sheetName={activeSheet.name}
           rowCount={activeSheet.rowCount}
           colCount={activeSheet.colCount}
           version={version}
@@ -256,6 +258,25 @@ export function WorkbookView({
         confirmLabel={deleting ? 'Deleting…' : 'Delete'}
         destructive
         pending={deleting}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteSheetId !== null}
+        onClose={() => setConfirmDeleteSheetId(null)}
+        title="Delete sheet"
+        message={
+          <>
+            Delete{' '}
+            <strong>{sheetList.find((s) => s.id === confirmDeleteSheetId)?.name}</strong>? This
+            can&apos;t be undone.
+          </>
+        }
+        onConfirm={() => {
+          if (confirmDeleteSheetId) void handleDeleteSheet(confirmDeleteSheetId);
+          setConfirmDeleteSheetId(null);
+        }}
+        confirmLabel="Delete"
+        destructive
       />
     </div>
   );

@@ -2,7 +2,7 @@
 
 A lightweight, self-hostable spreadsheet for [Sovereign](https://github.com/sovereignfs/sovereign), with a built-in currency conversion function.
 
-**Status:** v0.1.0 — planning, pre-scaffold (no code yet)
+**Status:** v0.1.0 — MVP complete (see [ROADMAP.md](ROADMAP.md))
 **Plugin ID:** `fs.sovereign.sheets`
 **Route:** `/sheets`
 
@@ -49,7 +49,7 @@ full workflow.
 - **Language:** TypeScript, React (Next.js App Router)
 - **Database:** isolated SQLite database via `sdk.db` — no direct
   `@sovereignfs/db` imports
-- **Formula engine:** TBD — see SPEC.md's "Open questions"
+- **Formula engine:** [HyperFormula](https://hyperformula.handsontable.com/) (GPLv3 free tier — see SPEC.md's "Open questions")
 - **UI:** `@sovereignfs/ui` components and `--sv-*` tokens exclusively
 
 ## Requirements
