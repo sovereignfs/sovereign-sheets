@@ -4,6 +4,7 @@
   "name": "Sheets",
   "version": "0.1.0",
   "description": "A lightweight spreadsheet with formulas and a built-in currency conversion function.",
+  "development": true,
   "type": "sovereign",
   "runtime": "native",
   "routePrefix": "/sheets",
